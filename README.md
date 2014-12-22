@@ -25,7 +25,7 @@ $ cp local.credentials.sample local.credentials
 $ vi local.credentials
 ```
 
-* Edit create-cluster.sh with your chosen IP address
+* Edit `create-cluster.sh` with your chosen IP address
 
 ```
 $ vi create-cluster.sh
