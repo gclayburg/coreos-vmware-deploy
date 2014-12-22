@@ -1,0 +1,114 @@
+# These settings can be overridden on the command line using environment variables or command line arguments, i.e.:
+# $ CORE_OS_HOSTNAME=coreos1 CORE_OS_USERNAME=somedude CORE_OS_IP_ADDRESS=192.168.1.99 deploy_coreos_on_esxi2.sh --channel stable worker.sh
+
+# or
+# $ deploy_core_os_on_esxi2.sh --core_os_hostname=worker1 worker.sh
+#
+# arguments are the variable names in lower case
+# $ export CORE_OS_HOSTNAME=worker1
+# $ deploy_core_os_on_esxi2.sh worker.sh
+# command line arguments take precedence over environment variables
+
+# Name of the VM Network to connect CoreOS VM
+export VM_NETWORK=${VM_NETWORK:-"VM Network"}
+
+# Hostname of CoreOS Instance, default is random 37 char name
+NEW_UUID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+export CORE_OS_HOSTNAME=${CORE_OS_HOSTNAME:-core-${NEW_UUID}}
+
+# Name of the CoreOS VM
+export VM_NAME=coreos-$CORE_OS_HOSTNAME
+
+# static IP Address of Instance running ETCD
+export ETCD_IP_ADDRESS=${ETCD_IP_ADDRESS:-192.168.1.58}
+
+# Username to enable on CoreOS Instance
+export CORE_OS_USERNAME=${CORE_OS_USERNAME:-gclaybur}
+
+# Password hash of CoreOS Instance
+export CORE_OS_PASSWORD_HASH=${CORE_OS_PASSWORD_HASH:-'$1$jmB5gDWK$PuhW2bvjEwIlW5Wx.2G4A.'} #opensesame1
+
+TMP_CLOUD_CONFIG_DIR=/tmp/new-drive
+
+echo "Build Cloud Config Settings ..."
+mkdir -p ${TMP_CLOUD_CONFIG_DIR}/openstack/latest
+
+cat > ${TMP_CLOUD_CONFIG_DIR}/openstack/latest/user_data << __CLOUD_CONFIG__
+#cloud-config
+
+hostname: ${CORE_OS_HOSTNAME}
+
+ssh_authorized_keys:
+    - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEAy6AWpFloZj8Z12Yx8tJHL2P2HCF9E/JRN0ZXcXKy/WBi8vPRDNcSP3WfXHxpxv6GRBTgiv/NJYkTcOHgoL5kIcA8foEaCQ5KjVd9kK/JXE3t9LwfLbBGMKjpbreCL8Y2bQGoxSsvg/sFr+OLAfiqMztEa/vBG8ucf6AEl4sLxLU= gclaybur@GaryClayburgXP
+    - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAtU/Fa44xSHrGrDHv8UjryROdKYECxMl6aQXaGGMZpC4tnYi/iIN7TNSmx5AZtrRs8Awa5OBgxHs7FveOz4IEEu6mSokZ9HuVwH9xsW5k/1ql5PX8xixeyQ4QzY9wUOObw3F6+cdXJEg6ybs1ELDvnHleEm9sh6Ff0ScPmOQ6laqrJW8TvdFpAkXUT9rYWLiB8gpWorcgS4atONWs7rXRXQLUgR45673U4AEVYuatJl1Z0USWqLvB4ZxdRrjMqeNGokVdpq2i77B6trH67m/OOzDN5FzywOZl9+Ml6PBWIuptFUIblI3l1E0klalWv0crR4euDnrCoeEzWGlcJOsbvw== gclaybur@ultra40
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxo08n4SQV1gLh0uhWrqjzRZptp/fovDz/3hmvp7MDXSMON/alaJ6OmWEuiuKWVxzEQafhmI517h3EjW18SPdHbPG0mHJvfUAJijrgzfS5LlFNbz0J0uC7jPDeWoGuEBCTV/mPujfZbqKv109X28nnDA+O8cRnwuARPm3jSfTzk9Xak9DnKNhMo9NYu7ULm4ycvv7S+QNrKdg/4IuJZGnuwgxJA7V5LkrbFvpRmoOa7fGYibzChDDU7aBMIQN/MXLbcykKN71g+duzSkZO7yFAfTTi3yBAVDOySY3eNOiUuTXGKdw7GrFdurjrYcvCiodVqxCFmG9X5HyKerz5jSOX gclaybur@DellE1705Garyc
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCy4r5MeUYvTNdDTPCEuBJ3RLwL3KvZsmkw2ODzJ89OyjDvlOfTfdjabIZi8hpm8Kwdo9PY68/Xf9PpEn6ruUaKL+baQAcWboZr1WyXCJjUyNllRz6XDrPNirSqOuWE6GmEJpjGbh2zcnSNQKmhrH0Kv9049t+nTRJg0v70oLXC3S1ltM9h8+ig68UV8uk2vdGQY/ogvrpC8YYmaxQx1JkXSZJakeckLwUCrKdgFVwZhJijKGHpsNhLb2z5JQtsvvTvkF+AN0Z9wbpJM+SX1Op8oJAIl1a6p6hXaP0nJk2jqb3vLsD41OCwL9MQb5ehiAh6i9nidfLMaAaDcfvMpEWr jenkins@beaver
+coreos:
+    update:
+      reboot-strategy: etcd-lock
+    fleet:
+      etcd_servers: "http://${ETCD_IP_ADDRESS}:4001"
+    units:
+    - name: fleet.service
+      command: start
+    - name: etcd.service
+      mask: true
+    - name: docker-tcp.socket
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Docker Socket for the API
+
+        [Socket]
+        ListenStream=2375
+        Service=docker.service
+        BindIPv6Only=both
+
+        [Install]
+        WantedBy=sockets.target
+    - name: 20-dhcp.network
+      runtime: true
+      content: |
+        [Match]
+        Name=en*
+
+        [Network]
+        DHCP=both
+
+        [DHCP]
+        UseDomains=true
+        UseDNS=true
+write_files:
+  - path: /etc/systemd/system/docker.service.d/50-insecure-registry.conf
+    content: |
+        #allow docker to use private registry over http using the dns registered name, "registry"
+        [Service]
+        Environment=DOCKER_OPTS='--insecure-registry="registry:5000"'
+  - path: /etc/profile.d/etcdctl.sh
+    permissions: 0644
+    owner: core
+    content: |
+      # configure etcdctl to work with our etcd servers set above
+      export ETCDCTL_PEERS="http://${ETCD_IP_ADDRESS}:4001"
+  - path: /etc/profile.d/fleetctl.sh
+    permissions: 0644
+    owner: core
+    content: |
+      # configure fleetctl to work with our etcd servers set above
+      export FLEETCTL_ENDPOINT=http://${ETCD_IP_ADDRESS}:4001
+      export FLEETCTL_EXPERIMENTAL_API=false
+users:
+  - name: ${CORE_OS_USERNAME}
+    ssh-authorized-keys:
+    - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEAy6AWpFloZj8Z12Yx8tJHL2P2HCF9E/JRN0ZXcXKy/WBi8vPRDNcSP3WfXHxpxv6GRBTgiv/NJYkTcOHgoL5kIcA8foEaCQ5KjVd9kK/JXE3t9LwfLbBGMKjpbreCL8Y2bQGoxSsvg/sFr+OLAfiqMztEa/vBG8ucf6AEl4sLxLU= gclaybur@GaryClayburgXP
+    - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAtU/Fa44xSHrGrDHv8UjryROdKYECxMl6aQXaGGMZpC4tnYi/iIN7TNSmx5AZtrRs8Awa5OBgxHs7FveOz4IEEu6mSokZ9HuVwH9xsW5k/1ql5PX8xixeyQ4QzY9wUOObw3F6+cdXJEg6ybs1ELDvnHleEm9sh6Ff0ScPmOQ6laqrJW8TvdFpAkXUT9rYWLiB8gpWorcgS4atONWs7rXRXQLUgR45673U4AEVYuatJl1Z0USWqLvB4ZxdRrjMqeNGokVdpq2i77B6trH67m/OOzDN5FzywOZl9+Ml6PBWIuptFUIblI3l1E0klalWv0crR4euDnrCoeEzWGlcJOsbvw== gclaybur@ultra40
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxo08n4SQV1gLh0uhWrqjzRZptp/fovDz/3hmvp7MDXSMON/alaJ6OmWEuiuKWVxzEQafhmI517h3EjW18SPdHbPG0mHJvfUAJijrgzfS5LlFNbz0J0uC7jPDeWoGuEBCTV/mPujfZbqKv109X28nnDA+O8cRnwuARPm3jSfTzk9Xak9DnKNhMo9NYu7ULm4ycvv7S+QNrKdg/4IuJZGnuwgxJA7V5LkrbFvpRmoOa7fGYibzChDDU7aBMIQN/MXLbcykKN71g+duzSkZO7yFAfTTi3yBAVDOySY3eNOiUuTXGKdw7GrFdurjrYcvCiodVqxCFmG9X5HyKerz5jSOX gclaybur@DellE1705Garyc
+    passwd: ${CORE_OS_PASSWORD_HASH}
+    primary-group: wheel
+    groups:
+      - sudo
+      - docker
+      - systemd-journal
+__CLOUD_CONFIG__
+
