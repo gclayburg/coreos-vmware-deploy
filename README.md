@@ -47,7 +47,7 @@ The supplied `*.user-data` files contain the specifics for the queenbee and work
 # Updating 
 The preferred method for changing the configuration of a coreos machine is to just create a new one with the new configuration and throw away the older ones.  Fleetd is pretty good at migrating workloads for you.  
 
-However, if you'd rather modify an existing coreos server, this script can do that too.  For example, lets say you want to add your own ssh public key for the workerbee1 server.  You can do that with the `-u` option:
+However, if you'd rather modify an existing CoreOS server, this script can do that too.  For example, lets say you want to add your own ssh public key for the workerbee1 server.  You can do that with the `-u` option:
 
 * Edit `worker-dhcp.user-data` and re-run the deploy script
 
@@ -57,7 +57,8 @@ $ . local.credentials
 $ deploy_coreos_on_esxi2.sh -u --core_os_hostname=workerbee1 worker-dhcp.user-data
 ```
 
-Note: Be careful about formatting when editing the `*.user-data` files.  Leading spaces are significant.  See [CoreOS cloud-config documentation for details](https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/)
+**Note:** CoreOS uses a mounted .iso image for reading the cloud-config data on VMware ESXi.  Make sure that the VM is powered off before running the script.  Otherwise, VMware will not recognize any changes.
+**Note:** Be careful about formatting when editing the `*.user-data` files.  Leading spaces are significant.  See [CoreOS cloud-config documentation for details](https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/)
 
 
 # Inspiration
