@@ -58,6 +58,7 @@ $ deploy_coreos_on_esxi2.sh -u --core_os_hostname=workerbee1 worker-dhcp.user-da
 ```
 
 **Note:** CoreOS uses a mounted .iso image for reading the cloud-config data on VMware ESXi.  Make sure that the VM is powered off before running the script.  Otherwise, VMware will not recognize any changes.
+
 **Note:** Be careful about formatting when editing the `*.user-data` files.  Leading spaces are significant.  See [CoreOS cloud-config documentation for details](https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/)
 
 
