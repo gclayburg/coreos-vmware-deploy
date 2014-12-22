@@ -18,8 +18,7 @@ This project was created to work around these limitations and to automate the se
 # Installation
 
 
-* Rename and edit [local.credentials.sample](https://github.com/gclayburg/coreos-vmware-deploy/blob/master/local.credentials.sample) to match your ESXi installation.  See script comments for details.
-
+* Rename and edit `local.credentials.sample` to match your ESXi installation.  See script comments for details.
 ```
 $ cp local.credentials.sample local.credentials
 $ vi local.credentials
