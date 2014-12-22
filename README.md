@@ -4,35 +4,30 @@ coreos-vmware-deploy
 Bash script for provisioning [CoreOS](https://coreos.com/) cluster on vmwware ESXi
 
 This script will create a simple CoreOS cluster consisting of:
-- one server that runs etcd with a static IP address
-- 3 worker servers that use DHCP to get an IP address
+- one queenbee server that runs etcd with a static IP address
+- 3 workerbee servers that use DHCP to get an IP address
 
 # Why
 
-This script is an simplified alternative to the [core os instructions for deploying onto vmware](https://coreos.com/docs/running-coreos/platforms/vmware/).
-Installing CoreOS onto vmware using the CoreOS instructions is more complicated than other platforms like [vagrant](https://coreos.com/docs/running-coreos/platforms/vagrant/) since the vmware provider does not support the `$public_ipv4` and `$private_ipv4` variable substitutions in the [cloud-config user-data configuration file](https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/).
+This script is a simplified alternative to the [core os instructions for deploying onto vmware](https://coreos.com/docs/running-coreos/platforms/vmware/).
+Installing CoreOS onto vmware using the CoreOS instructions is more complicated than other platforms like [vagrant](https://coreos.com/docs/running-coreos/platforms/vagrant/) since the vmware provider does not support the `$public_ipv4` and `$private_ipv4` variable substitutions in the [cloud-config user-data configuration file](https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/).  
 
 This project was created to work around these limitations and to automate the setup of a [single etcd CoreOS cluster](https://coreos.com/docs/cluster-management/setup/cluster-architectures/#easy-development/testing-cluster) on vmware ESXi.
 
 
 # Installation
 
-
 * Rename and edit `local.credentials.sample` to match your ESXi installation.  See script comments for details.
+
 ```
 $ cp local.credentials.sample local.credentials
 $ vi local.credentials
 ```
 
-* Edit `create-cluster.sh` with your chosen IP address
+* Edit `create-cluster.sh` with your chosen IP address and run
 
 ```
 $ vi create-cluster.sh
-```
-
-* run script:
-
-```
 $ ./create-cluster.sh
 ```
 
@@ -47,7 +42,20 @@ $ etcdctl get /helloworld
 
 # Security
 
-The supplied .user-data files contain the specifics for the queenbee and workerbee roles.  They should work for you as-is, but you probably want to modify these to put in your own credentials.  These templates will create a user named gclaybur with a few public keys.
+The supplied .user-data files contain the specifics for the queenbee and workerbee roles.  They should work for you as-is, but if security is important to you, you'll want to modify these to put in your own credentials.  These templates will create a user named gclaybur with a few public keys and a default password of `opensesame1`.
+
+# Updating 
+The preferred method for changing the configuration of a coreos machine is to just create a new one with the new configuration and throw away the older ones.  Fleetd is pretty good at migrating workloads for you.  
+
+However, if you'd rather modify an existing coreos server, this script can do that to.  For example, lets say you want to add your own ssh public key for the workerbee1 server.  You can do that with the `-u` option:
+
+* Edit `worker-dhcp.user-data` and re-run the deploy script
+
+```
+$ vi worker-dhcp.user-data
+$ . local.credentials
+$ deploy_coreos_on_esxi2.sh -u --core_os_hostname=workerbee1 worker-dhcp.user-data
+```
 
 
 # Inspiration
