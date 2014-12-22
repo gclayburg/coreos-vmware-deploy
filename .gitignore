@@ -46,4 +46,8 @@ gwt-unitCache/
 #vmware files
 *.vmx
 *.vmdk.bz2
+*.vmdk
 *.iso
+
+#local environment/credentials
+*.credentials
