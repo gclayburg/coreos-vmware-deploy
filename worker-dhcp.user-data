@@ -79,6 +79,17 @@ coreos:
         [DHCP]
         UseDomains=true
         UseDNS=true
+    - name: settimezone.service
+      command: start
+      content: |
+        [Unit]
+        Description=Set the timezone
+
+        [Service]
+        ExecStart=/usr/bin/timedatectl set-timezone America/Denver
+        RemainAfterExit=yes
+        Type=oneshot
+
 write_files:
   - path: /etc/systemd/system/docker.service.d/50-insecure-registry.conf
     content: |

@@ -50,6 +50,16 @@ coreos:
         Gateway=${GATEWAY}
         DNS=${DNS}
         Domains=${DOMAINS}
+    - name: settimezone.service
+      command: start
+      content: |
+        [Unit]
+        Description=Set the timezone
+
+        [Service]
+        ExecStart=/usr/bin/timedatectl set-timezone America/Denver
+        RemainAfterExit=yes
+        Type=oneshot
 
 users:
   - name: ${CORE_OS_USERNAME}
