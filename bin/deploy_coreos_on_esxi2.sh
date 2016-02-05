@@ -180,9 +180,12 @@ __CLOUD_CONFIG_ISO__
 VM_ID=\$(vim-cmd solo/register ${CORE_OS_DATASTORE_PATH}/${CORE_OS_VMX_FILE})
 
 # Upgrade CoreOS Virtual Hardware from 4 to 9
+echo "Upgrade CoreOS Virtual Hardware from 4 to 9"
+
 vim-cmd vmsvc/upgrade \${VM_ID} vmx-09
 
 # PowerOn CoreOS VM
+echo "PowerOn CoreOS VM"
 vim-cmd vmsvc/power.on \${VM_ID}
 echo "VM ${VM_NAME} is now running using hostname: ${CORE_OS_HOSTNAME}"
 #The first time coreos boots up, it will use DHCP to get a random IP address.  Later in the boot process, coreos will write the static.network file which overrides the DHCP behavior for the next boot.
@@ -203,8 +206,33 @@ __CORE_OS_ON_ESXi__
   chmod +x ${CORE_OS_ESXI_SETUP_SCRIPT}
 
   echo "Running ${CORE_OS_ESXI_SETUP_SCRIPT} script against ESXi host ..."
+  #todo use expect to supply password to ssh,
+  # and not prompt user for password if they have not setup ssh keys between the client and esxi server
   ssh -o ConnectTimeout=300 ${ESXI_USERNAME}@${ESXI_HOST} < ${CORE_OS_ESXI_SETUP_SCRIPT}
 
+#SCRIPT_OUT=$(expect -c "
+#  spawn scp ${CORE_OS_ESXI_SETUP_SCRIPT} ${ESXI_USERNAME}@${ESXI_HOST}:
+#  match_max 100000
+#  expect {
+#    \"*?assword:*\" {
+#      send \"$ESXI_PASSWORD\r\"
+#      expect eof
+#    } eof {
+#    }
+#  }
+
+#  spawn ssh -o ConnectTimeout=300 root@paladin \"chmod 755 ${CORE_OS_ESXI_SETUP_SCRIPT}; ./${CORE_OS_ESXI_SETUP_SCRIPT} \"
+#  match_max 100000
+#  expect {
+#    \"*?assword:*\" {
+#      send \"$ESXI_PASSWORD\r\"
+#      expect eof
+#    } eof {
+#    }
+#  }
+
+#")
+# echo "output: $SCRIPT_OUT"
 }
 #echo "Cleaning up ..."
 #rm -f ${CORE_OS_ESXI_SETUP_SCRIPT}
