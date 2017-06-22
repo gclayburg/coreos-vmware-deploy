@@ -32,12 +32,20 @@ ssh_authorized_keys:
     - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAtU/Fa44xSHrGrDHv8UjryROdKYECxMl6aQXaGGMZpC4tnYi/iIN7TNSmx5AZtrRs8Awa5OBgxHs7FveOz4IEEu6mSokZ9HuVwH9xsW5k/1ql5PX8xixeyQ4QzY9wUOObw3F6+cdXJEg6ybs1ELDvnHleEm9sh6Ff0ScPmOQ6laqrJW8TvdFpAkXUT9rYWLiB8gpWorcgS4atONWs7rXRXQLUgR45673U4AEVYuatJl1Z0USWqLvB4ZxdRrjMqeNGokVdpq2i77B6trH67m/OOzDN5FzywOZl9+Ml6PBWIuptFUIblI3l1E0klalWv0crR4euDnrCoeEzWGlcJOsbvw== gclaybur@ultra40
     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxo08n4SQV1gLh0uhWrqjzRZptp/fovDz/3hmvp7MDXSMON/alaJ6OmWEuiuKWVxzEQafhmI517h3EjW18SPdHbPG0mHJvfUAJijrgzfS5LlFNbz0J0uC7jPDeWoGuEBCTV/mPujfZbqKv109X28nnDA+O8cRnwuARPm3jSfTzk9Xak9DnKNhMo9NYu7ULm4ycvv7S+QNrKdg/4IuJZGnuwgxJA7V5LkrbFvpRmoOa7fGYibzChDDU7aBMIQN/MXLbcykKN71g+duzSkZO7yFAfTTi3yBAVDOySY3eNOiUuTXGKdw7GrFdurjrYcvCiodVqxCFmG9X5HyKerz5jSOX gclaybur@DellE1705Garyc
     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCy4r5MeUYvTNdDTPCEuBJ3RLwL3KvZsmkw2ODzJ89OyjDvlOfTfdjabIZi8hpm8Kwdo9PY68/Xf9PpEn6ruUaKL+baQAcWboZr1WyXCJjUyNllRz6XDrPNirSqOuWE6GmEJpjGbh2zcnSNQKmhrH0Kv9049t+nTRJg0v70oLXC3S1ltM9h8+ig68UV8uk2vdGQY/ogvrpC8YYmaxQx1JkXSZJakeckLwUCrKdgFVwZhJijKGHpsNhLb2z5JQtsvvTvkF+AN0Z9wbpJM+SX1Op8oJAIl1a6p6hXaP0nJk2jqb3vLsD41OCwL9MQb5ehiAh6i9nidfLMaAaDcfvMpEWr jenkins@beaver
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2eo18ISUYUcB5jgDU2ym2s2x7BUFuvnEYNEag/5cRv3/i9/kQG3YeO4tUCzRgHIA0RM/DV2fH8PoOXo0M0EMYGTgqpl9azSK8nDIQlhNi0zQe+mE/HG/pyATmVsWE5nLpycIil5K6V/I0CmcajfkxK8TSi6qHdzVX+TzfGIqY0loU2d+nLDhlZf+EkxfoSHwJSHU5I6UnFVZ1Iznq8lNOcQjm5MPAoMLF3oRT81tWkkhCjL+7M7IyFL4R0QqnDYKXqGjhPEY+wbE4qeZynjoP2oceZO6inO+NeqsBzTX00nXmiRQvqBZYxNZJzASzyaF73x3ujnNx7dtLiknjaExz gclaybur@gary-XPS-13-9360
 
 coreos:
-  etcd:
-    addr: ${ETCD_IP_ADDRESS}:4001
+  etcd2:
+    advertise-client-urls: "http://${ETCD_IP_ADDRESS}:2379"
+    initial-advertise-peer-urls: "http://${ETCD_IP_ADDRESS}:2380"
+    listen-client-urls: "http://0.0.0.0:2379,http://0.0.0.0:4001"
+    listen-peer-urls: "http://${ETCD_IP_ADDRESS}:2380,http://${ETCD_IP_ADDRESS}:7001"
+    name: "${ETCD_HOSTNAME}"
+    initial-cluster: "${ETCD_HOSTNAME}=http://${ETCD_IP_ADDRESS}:2380"
+  update:
+    reboot-strategy: "reboot"
   units:
-    - name: etcd.service
+    - name: etcd2.service
       command: start
     - name: 00-ens.network
       runtime: true
@@ -61,12 +69,19 @@ coreos:
         RemainAfterExit=yes
         Type=oneshot
 
+write_files:
+  - path: /etc/systemd/system/docker.service.d/50-insecure-registry.conf
+    content: |
+        #allow docker to use private registry over http using the dns registered name, "registry"
+        [Service]
+        Environment=DOCKER_OPTS='--insecure-registry="registry:5000"'
 users:
   - name: ${CORE_OS_USERNAME}
     ssh-authorized-keys:
     - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEAy6AWpFloZj8Z12Yx8tJHL2P2HCF9E/JRN0ZXcXKy/WBi8vPRDNcSP3WfXHxpxv6GRBTgiv/NJYkTcOHgoL5kIcA8foEaCQ5KjVd9kK/JXE3t9LwfLbBGMKjpbreCL8Y2bQGoxSsvg/sFr+OLAfiqMztEa/vBG8ucf6AEl4sLxLU= gclaybur@GaryClayburgXP
     - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAtU/Fa44xSHrGrDHv8UjryROdKYECxMl6aQXaGGMZpC4tnYi/iIN7TNSmx5AZtrRs8Awa5OBgxHs7FveOz4IEEu6mSokZ9HuVwH9xsW5k/1ql5PX8xixeyQ4QzY9wUOObw3F6+cdXJEg6ybs1ELDvnHleEm9sh6Ff0ScPmOQ6laqrJW8TvdFpAkXUT9rYWLiB8gpWorcgS4atONWs7rXRXQLUgR45673U4AEVYuatJl1Z0USWqLvB4ZxdRrjMqeNGokVdpq2i77B6trH67m/OOzDN5FzywOZl9+Ml6PBWIuptFUIblI3l1E0klalWv0crR4euDnrCoeEzWGlcJOsbvw== gclaybur@ultra40
     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxo08n4SQV1gLh0uhWrqjzRZptp/fovDz/3hmvp7MDXSMON/alaJ6OmWEuiuKWVxzEQafhmI517h3EjW18SPdHbPG0mHJvfUAJijrgzfS5LlFNbz0J0uC7jPDeWoGuEBCTV/mPujfZbqKv109X28nnDA+O8cRnwuARPm3jSfTzk9Xak9DnKNhMo9NYu7ULm4ycvv7S+QNrKdg/4IuJZGnuwgxJA7V5LkrbFvpRmoOa7fGYibzChDDU7aBMIQN/MXLbcykKN71g+duzSkZO7yFAfTTi3yBAVDOySY3eNOiUuTXGKdw7GrFdurjrYcvCiodVqxCFmG9X5HyKerz5jSOX gclaybur@DellE1705Garyc
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2eo18ISUYUcB5jgDU2ym2s2x7BUFuvnEYNEag/5cRv3/i9/kQG3YeO4tUCzRgHIA0RM/DV2fH8PoOXo0M0EMYGTgqpl9azSK8nDIQlhNi0zQe+mE/HG/pyATmVsWE5nLpycIil5K6V/I0CmcajfkxK8TSi6qHdzVX+TzfGIqY0loU2d+nLDhlZf+EkxfoSHwJSHU5I6UnFVZ1Iznq8lNOcQjm5MPAoMLF3oRT81tWkkhCjL+7M7IyFL4R0QqnDYKXqGjhPEY+wbE4qeZynjoP2oceZO6inO+NeqsBzTX00nXmiRQvqBZYxNZJzASzyaF73x3ujnNx7dtLiknjaExz gclaybur@gary-XPS-13-9360
     passwd: ${CORE_OS_PASSWORD_HASH}
     primary-group: wheel
     groups:
